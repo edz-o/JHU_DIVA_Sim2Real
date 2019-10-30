@@ -6,7 +6,7 @@ import json
 import numpy as np
 
 split = 'validate' # training or validate
-IMAGE_DIR = "/data/diva/diva_data"
+IMAGE_DIR = "/data/diva/diva_data" # directory of the dumped DIVA images, modify this accordingly
 DUMP_DIR = '190207_DIVA_Union_CGT_images/{}'
 CGT_DIR = '190207_DIVA_Union_CGT'
 
