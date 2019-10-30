@@ -1,0 +1,5 @@
+pretrained
+*.zip
+*.pth
+*.pyc
+*.json
