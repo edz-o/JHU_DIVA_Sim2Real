@@ -20,9 +20,11 @@ python json_gt_to_cgt_oroginal_v2.py
 python image_crop_with_cgt.py 
 ```
 
+**The cropped frames can be downloaded from [here](https://www.cs.jhu.edu/~yzh/190207_DIVA_Union_CGT_images.tar).**
+
 ## Generate lists
 
-We provide examples in `name_lists/`
+**We provide examples in `name_lists/`**
 The paths format should be:
 
 ```
