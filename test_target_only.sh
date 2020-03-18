@@ -1,6 +1,6 @@
 
 #for ITER in 5000 10000 15000 20000 25000 30000 35000 40000
-for ITER in {100..100..1000}
+for ITER in {100..1000..100}
 do
     model_weights=20191029_test_target/snapshots/ue2diva/$ITER.pth
     out_root=outputs/20191008_target_only_$ITER
