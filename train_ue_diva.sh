@@ -21,6 +21,6 @@ CUDA_VISIBLE_DEVICES=$GPUs python train_sim_target_only.py --snapshot-dir ./snap
     --learning-rate 0.01 --weight-decay 2.5e-4 --batch-size $BATCH_SIZE \
     --init-weights pretrained/i3d_inception.pth --num-classes 6 \
     --learning-rate-D 0.0001 --lambda-adv-target 0.001 \
-    --num-steps-stop 40000 --save-pred-every 100 \
+    --num-steps-stop 15000 --save-pred-every 100 \
     --model I3D-inception | tee $EXP_NAME.log
 
