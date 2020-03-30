@@ -53,6 +53,8 @@ eg. DIVA_Union_CGT_images/training/Closing/VIRAT_S_040005_07_001026_001223_963 3
 
 I3D weights pretrained on Kinetics [here](https://www.cs.jhu.edu/~yzh/i3d_inception.pth). Put it under `pretrained/`.
 
+Pretrained weights using synthetic data [here](https://www.cs.jhu.edu/~yzh/sim_pretrain_10000.pth).
+
 # Instructions
 
 This code contains two experiments: ***real***, ***real+sim***; train on diva dataset only or train on diva dataset plus synthetic dataset.
