@@ -154,6 +154,7 @@ class DIVA_carhuman_rgb_1005(Dataset):
       REAL = 'real' in self.mode
 
       if 'real' in self.mode and self.split == 'test':
+        # Need some sliding window mechanism
         begin_index = 0
         end_index = min(64, len(paths))
       else:

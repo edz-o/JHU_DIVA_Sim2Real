@@ -8,12 +8,12 @@ import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.nn.functional as F
-from torch.autograd import Variable
 import torch.optim
 from torch.optim import lr_scheduler
 import torch.utils.data
 import torch.utils.data.distributed
 from torch.utils.data import DataLoader
+from collections import defaultdict
 
 import sys
 sys.path.append('..')
@@ -23,9 +23,11 @@ from scipy.stats import mode
 from torchvision import datasets, transforms
 import videotransforms
 
-from torch.autograd import Variable
 from model.model_inception import I3D
 from sklearn.metrics import average_precision_score
+import time
+from datetime import datetime
+import pickle as pkl
 
 classes= [
   'Closing',
@@ -35,6 +37,8 @@ classes= [
   'Open_Trunk',
   'Opening',
 ]
+
+USE_NEG_LABEL = True
 
 def parse_args():
     parser = argparse.ArgumentParser(description="test I3D")
@@ -149,47 +153,79 @@ def main():
     model = model.cuda()
 
   sys.stdout.flush()
+  data_loader = CreateActTrgDataLoader(args, 'test')
 
-  test_model(args, model)
+  test_model(args, model, data_loader)
 
 
-def test_model(args, model):
+def test_model(args, model, data_loader):
 
-  val_loaders = CreateActTrgDataLoader(args, 'test')
-
-  loaders = {
-    'val':val_loaders
-  }
-  num_preds = np.zeros(n_classes)
-  num_gts = np.zeros(n_classes)
-  num_corrects = np.zeros(n_classes)
-  for epoch in range(1):
-    for phase in ['val']:
+  #num_preds = np.zeros(n_classes)
+  #num_gts = np.zeros(n_classes)
+  #num_corrects = np.zeros(n_classes)
+  for phase in ['val']:
       model.train(False)
-      running_loss = 0.0
-      all_running_corrects = 0
-      precisions = []
-      recalls = []
-      f1s = []
+      #running_loss = 0.0
+      #all_running_corrects = 0
+
+      #precisions = []
+      #recalls = []
+      #f1s = []
+
       # Iterate over data.
+      # Epoch statistics
+      steps_in_epoch = int(np.ceil(len(data_loader.dataset)/args.batch_size))
+      #losses = np.zeros(steps_in_epoch, np.float32)
+      accuracies = np.zeros(steps_in_epoch, np.float32)
+
+      ys = np.zeros(len(data_loader.dataset))
+      ys_ = np.zeros((len(data_loader.dataset), n_classes))
+      all_preds = np.zeros(len(data_loader.dataset))
+      ps = []
+      epoch_start_time = time.time()
       count = 0
-      for data in loaders[phase]:
-        dataset_size = len(loaders[phase])
+      examples = 0
+
+      for step, data in enumerate(data_loader):
+        #dataset_size = len(data_loader)
 
         inputs, labels, real, paths = data
+        bz = inputs.size()[0]
+        #pdb.set_trace()
+        ys[count:count+bz] = labels.numpy()
+        #pdb.set_trace()
+
+        # paths shape [16 x bz]
+        paths = np.array(paths).transpose((1,0))
+        ps.extend([path[0] for path in paths])
 
         if use_gpu:
-          inputs = Variable(inputs.cuda()).float()
-          labels = Variable(labels.cuda()).long()
+          inputs = inputs.cuda().float()
+          labels = labels.cuda().long()
         else:
-          inputs, labels = Variable(inputs).float(), Variable(labels).float()
+          inputs, labels = inputs.float(), labels.float()
 
-        count += 1
         with torch.no_grad():
-          vid_len = inputs.size(2)
           outputs, _, = model(inputs)
 
         preds = torch.max(outputs,dim=1)[1]
+        all_preds[count:count+bz] = preds.cpu().numpy()
+        # TODO calculate loss
+
+        probs = torch.softmax(outputs, dim=-1)
+        ys_[count:count+bz] = probs.cpu().numpy() #.squeeze()
+        count += bz
+
+        correct = torch.sum(preds == labels)
+        accuracy = correct.double() / bz
+
+        # Calculate elapsed time for this step
+        examples += bz
+
+        # Save statistics
+        accuracies[step] = accuracy.item()
+        #losses[step] = loss.item()
+        '''
         for p,l in zip(preds,labels):
           num_preds[p.cpu().numpy()] += 1
           num_gts[int(l.cpu().numpy())] += 1
@@ -205,8 +241,6 @@ def test_model(args, model):
 
 
         for batch_ind in range(0,outputs.shape[0]):
-          #prop_id = paths[0][batch_ind].split('/')[-4]+'_' +paths[0][batch_ind].split('/')[-2].split(' ')[0] \
-          #          +'_'+str(classes.index(paths[0][batch_ind].split('/')[-3]))
           prop_id = paths[0][batch_ind].split('/')[-4]+'_' +paths[0][batch_ind].split('/')[-2].split(' ')[0] \
                     +'_'+str(paths[0][batch_ind].split('/')[-3])
           outs = outputs[batch_ind].cpu().numpy()
@@ -225,14 +259,43 @@ def test_model(args, model):
                                                                           recalls[-1],
                                                                           f1s[-1]),end= '\r')
         sys.stdout.flush()
-      epoch_loss = running_loss / (dataset_size*args.batch_size + 0.0001)
-      epoch_acc = float(all_running_corrects) / (dataset_size*args.batch_size + 0.0001)
-      epoch_prec = precisions[-1]
-      epoch_recall = recalls[-1]
-      epoch_f1 = 2* (epoch_prec*epoch_recall)/(epoch_prec+epoch_recall+0.0001)
+
+        '''
+
+      ys = ys.astype(int)
+      ps = np.array(ps)
+
+      val_vid_map, val_vid_aps = acc_ap(ps, ys, ys_, n_classes)
+
+      ll = np.squeeze(np.eye(n_classes)[ys.reshape(-1)])
+      val_frm_map, val_frm_aps = get_mean_average_precision(ll, ys_, n_classes)
+      with open('preds.pkl', 'wb') as f:
+          #pkl.dump(dict(ps=ps),f)
+          pkl.dump(dict(ps=ps, preds=all_preds, gts=ys),f)
+
+      print('val vid aps', val_vid_aps)
+      print('val frm aps', val_frm_aps)
+      print('val vid mAP: {:.4f}, val frm mAP: {:.4f}'.format(val_vid_map, val_frm_map))
+
+      # Epoch statistics
+      epoch_duration = float(time.time() - epoch_start_time)
+      epoch_avg_loss = 0  #np.mean(losses)
+      epoch_avg_acc  = np.mean(accuracies)
+
+      print('================= val epoch:  =================\n'
+            'val_loss: {:.4f}, val_acc: {:.4f}, val_vid_map: {:.4f}, val_frm_map: {:.4f}\n'.format(
+            epoch_avg_loss, epoch_avg_acc, val_vid_map, val_frm_map))
 
 
-      print('---------  {} Loss: {:.4f} Acc: {:.4f} Precision: {:.4f} Recall: {:.4f} F1: {:.4f}  -----------'.format(phase, epoch_loss, epoch_acc, epoch_prec, epoch_recall, epoch_f1))
+
+      #epoch_loss = running_loss / (dataset_size*args.batch_size + 0.0001)
+      #epoch_acc = float(all_running_corrects) / (dataset_size*args.batch_size + 0.0001)
+      #epoch_prec = precisions[-1]
+      #epoch_recall = recalls[-1]
+      #epoch_f1 = 2* (epoch_prec*epoch_recall)/(epoch_prec+epoch_recall+0.0001)
+
+
+      #print('---------  {} Loss: {:.4f} Acc: {:.4f} Precision: {:.4f} Recall: {:.4f} F1: {:.4f}  -----------'.format(phase, epoch_loss, epoch_acc, epoch_prec, epoch_recall, epoch_f1))
 
 
 if __name__ == '__main__':
