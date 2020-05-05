@@ -9,6 +9,7 @@ class TrainOptions():
         parser.add_argument("--train-list", type=str, default='/data/wxy/diva_i3d/name_lists/training_loso.txt', help="Path to the directory containing the source dataset.")
         parser.add_argument("--test-list", type=str, default='/data/wxy/diva_i3d/name_lists/validate_loso.txt', help="Path to the file listing the images in the source dataset.")
         parser.add_argument("--sim-list", type=str, default='/data/wxy/diva_i3d/name_lists/sim_training.txt', help="Path to the file listing the images in the source dataset.")
+        parser.add_argument("--data_root", type=str, default='', help="data root")
         # parser.add_argument("--data-label-folder-target", type=str, default=None, help="Path to the soft assignments in the target dataset.")
         parser.add_argument("--learning-rate", type=float, default=2.5e-4, help="initial learning rate for the segmentation network.")
         parser.add_argument("--learning-rate-D", type=float, default=1e-4, help="initial learning rate for discriminator.")

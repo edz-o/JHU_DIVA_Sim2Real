@@ -30,7 +30,48 @@ classes= [
   'Open_Trunk',
   'Opening',
 ]
+classes = [
 
+        'null',
+        'person_opens_facility_door',
+        'person_closes_facility_door',
+        'person_enters_through_structure',
+        'person_exits_through_structure',
+        'person_opens_vehicle_door',
+        'person_closes_vehicle_door',
+        'person_enters_vehicle',
+        'person_exits_vehicle',
+        'Open_Trunk',
+        'Closing_Trunk',
+        'person_loads_vehicle',
+        'Unloading',
+        'Talking',
+        'specialized_talking_phone',
+        'specialized_texting_phone',
+        'Riding',
+        'vehicle_turning_left',
+        'vehicle_turning_right',
+        'vehicle_u_turn',
+        'person_sitting_down',
+        'person_standing_up',
+        'person_reading_document',
+        'object_transfer',
+        'person_picks_up_object',
+        'person_sets_down_object',
+        'Transport_HeavyCarry',
+        'hand_interaction',
+        'person_person_embrace',
+        'person_purchasing',
+        'person_laptop_interaction',
+        'vehicle_stopping',
+        'vehicle_starting',
+        'vehicle_reversing',
+        'vehicle_picks_up_person',
+        'vehicle_drops_off_person',
+        'abandon_package',
+        'theft'
+
+        ]
 def get_prop_seq_name(name):
     return '_'.join(name.split('_')[:-1])
 
@@ -67,7 +108,8 @@ class VideoRecord(object):
 
     @property
     def label(self):
-        return classes.index(self._data[3].strip())
+        return int(self._data[3].strip())
+        #return classes.index(self._data[3].strip())
 
     @property
     def num_frames(self):
@@ -79,7 +121,8 @@ class DIVA_carhuman_rgb_1005(Dataset):
                mode='real',
                activities=classes,
                transform=None,
-               n_samples=16):
+               n_samples=16,
+               data_root=''):
     self.activities = activities
     self.split=split
     self.mode=mode
@@ -88,6 +131,7 @@ class DIVA_carhuman_rgb_1005(Dataset):
     self.transform = transform
     self.n_samples = n_samples
     self.stride = int(64 / self.n_samples)
+    self.data_root = data_root
 
     if 'real' in self.mode:
       self.style = "{:05d}"
@@ -128,7 +172,7 @@ class DIVA_carhuman_rgb_1005(Dataset):
         crop = cv2.imread(frame)
         if crop is None:
             print(frame)
-            pdb.set_trace()      
+            pdb.set_trace()
         X.append(crop)
 
       if self.transform:
@@ -143,23 +187,23 @@ class DIVA_carhuman_rgb_1005(Dataset):
     self._parse_list()
     for i in range(len(self.video_list)):
       record = self.video_list[i]
-      root = record.path
+      root = os.path.join(self.data_root, record.path)
       start = record.start_frames
       end = record.end_frames
       label = record.label
       img_paths = []
 
       for frame_ in range(start, end):
-        if os.path.exists(os.path.join(root, self.style.format(frame_)+'.png')):
-          img_paths.append(os.path.join(root, self.style.format(frame_)+'.png'))
-          
+        if os.path.exists(os.path.join(root, self.style.format(frame_)+'.jpg')):
+          img_paths.append(os.path.join(root, self.style.format(frame_)+'.jpg'))
 
-      
+
+
       if len(img_paths) == 0 or label is None:
         continue
 
       self.indices.append((img_paths, label))
-        
+
 
 
 if __name__ == '__main__':

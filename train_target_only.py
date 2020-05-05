@@ -61,6 +61,7 @@ def main():
         except StopIteration:
             targetloader_iter = iter(targetloader)
             trg_img, trg_lbl, _, paths = next(targetloader_iter)
+
         trg_score, loss_trg = model(trg_img, lbl=trg_lbl)
 
 
@@ -84,7 +85,7 @@ def main():
                 print('taking snapshot ... eval_loss: {}'.format(eval_loss))
                 torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(i+1)+'.pth' ))
                 eval_loss = np.array([eval_loss])
-        
+
         if (i+1) % args.print_freq == 0:
             _t['iter time'].toc(average=False)
             print('[it %d][src loss %.4f][lr %.4f][%.2fs]' % \

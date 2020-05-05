@@ -32,7 +32,7 @@ def CreateModel(args):
             return model
 
     if args.model == 'I3D-inception':
-        model = I3D(num_classes=args.num_classes, phase=args.set)
+        model = I3D(num_classes=args.num_classes, phase=args.set, partial_bn=False)
         # print(model)
         pretrained_dict = torch.load(args.init_weights)
         dict_new = {}
@@ -45,6 +45,8 @@ def CreateModel(args):
         if args.set == 'train':
             optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
                                   lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
+            #optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+            #                      lr=args.learning_rate, weight_decay=args.weight_decay)
 
             optimizer.zero_grad()
             model = torch.nn.DataParallel(model).cuda()

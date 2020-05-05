@@ -60,14 +60,16 @@ def CreateActTrgDataLoader(args, mode):
                     args.train_list,
                     split=mode,
                     mode='real',
-                    transform=train_transforms
+                    transform=train_transforms,
+                    data_root=args.data_root
         )
     else:
         source_dataset = DIVA_carhuman_rgb_1005 (
                     args.test_list,
                     split=mode,
                     mode='real',
-                    transform=test_transforms
+                    transform=test_transforms,
+                    data_root=args.data_root
         )
 
     source_dataloader = data.DataLoader(source_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True)
