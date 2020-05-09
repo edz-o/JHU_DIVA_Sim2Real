@@ -16,10 +16,10 @@ GPUs=$2
 
 BATCH_SIZE=16
 CUDA_VISIBLE_DEVICES=$GPUs python train_target_only.py --snapshot-dir ./snapshots/$EXP_NAME \
-    --train-list /data/yzhang/IBM_data/umd_gt_train.txt \
-    --test-list /data/yzhang/IBM_data/umd_gt_test.txt \
-    --data_root /data/yzhang/IBM_data \
-    --learning-rate 0.0001 --weight-decay 2.5e-4 --batch-size $BATCH_SIZE \
+    --train-list sim_meva_train_6class.txt \
+    --test-list sim_meva_train_6class.txt \
+    --data_root /data/yzhang \
+    --learning-rate 0.01 --weight-decay 2.5e-4 --batch-size $BATCH_SIZE \
     --init-weights pretrained/i3d_inception.pth --num-classes 38 \
-    --num-steps-stop 20000 --save-pred-every 1000 \
+    --num-steps-stop 10000 --save-pred-every 1000 \
     --model I3D-inception | tee $EXP_NAME.log

@@ -39,13 +39,15 @@ def CreateActSrcDataLoader(args, mode='train'):
         source_dataset = DIVA_carhuman_rgb_1005 (
                         args.sim_list,
                         mode='sim',
-                        transform=train_transforms
+                        transform=train_transforms,
+                        data_root=args.sim_data_root
             )
     else:
         source_dataset = DIVA_carhuman_rgb_1005 (
                     args.test_list,
                     mode='sim',
-                    transform=test_transforms
+                    transform=test_transforms,
+                    data_root=args.sim_data_root
         )
 
 

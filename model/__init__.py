@@ -35,18 +35,19 @@ def CreateModel(args):
         model = I3D(num_classes=args.num_classes, phase=args.set, partial_bn=False)
         # print(model)
         pretrained_dict = torch.load(args.init_weights)
-        dict_new = {}
-        for k,v in pretrained_dict.items():
-            if k != 'features.18.weight' and k != 'features.18.bias':
-                dict_new[k] = v
-        net_dict = model.state_dict()
-        net_dict.update(dict_new)
-        model.load_state_dict(net_dict)
+        #dict_new = {}
+        #for k,v in pretrained_dict.items():
+        #    if k != 'features.18.weight' and k != 'features.18.bias':
+        #        dict_new[k] = v
+        #net_dict = model.state_dict()
+        #net_dict.update(dict_new)
+        #model.load_state_dict(net_dict, strict=False)
+        model.load_state_dict(pretrained_dict, strict=False)
         if args.set == 'train':
-            optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
-                                  lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
-            #optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
-            #                      lr=args.learning_rate, weight_decay=args.weight_decay)
+            #optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+            #                      lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
+            optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                  lr=args.learning_rate, weight_decay=args.weight_decay)
 
             optimizer.zero_grad()
             model = torch.nn.DataParallel(model).cuda()

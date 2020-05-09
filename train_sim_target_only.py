@@ -54,6 +54,7 @@ def main():
     best_step = 0
     eval_loss = np.array([0])
     for i in range(start_iter, args.num_steps):
+        model.train()
 
         model.module.adjust_learning_rate(args, optimizer, i)
         model_D.module.adjust_learning_rate(args, optimizer_D, i)
@@ -70,6 +71,8 @@ def main():
             src_img, src_lbl, _, _ = next(sourceloader_iter)
         src_img, src_lbl = Variable(src_img).cuda(), Variable(src_lbl.long()).cuda()
         src_score, loss_src = model(src_img, lbl=src_lbl)
+        coeff = 0.9 * (1000-i)/1000 + 0.1 if i < 1000 else 0.1
+        loss_src *= coeff
         loss_src.mean().backward()
 
         try:

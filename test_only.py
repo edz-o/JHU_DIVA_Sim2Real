@@ -43,12 +43,15 @@ USE_NEG_LABEL = True
 def parse_args():
     parser = argparse.ArgumentParser(description="test I3D")
     parser.add_argument("--iter", type=int, help='model iteration')
+    parser.add_argument("--is_real", default=1, type=int, help='model iteration')
     parser.add_argument("--batch-size", type=int, help='batch size')
     parser.add_argument("--test-list", type=str, default='/data/wxy/diva_i3d/validate.txt', help="Path to the file listing the images in the source dataset.")
     parser.add_argument("--model-weights", type=str, help='model iteration')
     parser.add_argument("--data_root", type=str, default='', help="data root")
     parser.add_argument("--num-workers", type=int, default=4, help='model number workers')
     parser.add_argument("--out-root", type=str, help='model iteration')
+    parser.add_argument("--method", type=str, default='', help='method name')
+    parser.add_argument("--out_feat", action='store_true', help='output feature')
 
 
     return parser.parse_args()
@@ -206,7 +209,18 @@ def test_model(args, model, data_loader):
           inputs, labels = inputs.float(), labels.float()
 
         with torch.no_grad():
-          outputs, _, = model(inputs)
+          outputs, feat = model(inputs)
+
+        ### save feature
+        if args.out_feat:
+            feat = feat.mean(2).cpu().numpy().flatten()
+            label = labels.cpu().numpy()
+            real = np.array([args.is_real])
+            info = np.concatenate((feat, label, real))
+            out_root = 'saved_features'
+            os.makedirs(os.path.join(out_root, args.method), exist_ok=True)
+            domain = 'real' if args.is_real else 'sim'
+            np.savetxt(os.path.join(out_root, args.method, domain+'%05d.txt'%step), info)
 
         preds = torch.max(outputs,dim=1)[1]
         all_preds[count:count+bz] = preds.cpu().numpy()

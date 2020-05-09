@@ -431,9 +431,9 @@ class I3D(nn.Module):
 
 
     def adjust_learning_rate(self, args, optimizer, i):
-        optimizer.param_groups[0]['lr'] = args.learning_rate * (0.1**(int(i/30000)))
+        optimizer.param_groups[0]['lr'] = args.learning_rate * (0.1**(int(i/15000)))
         if len(optimizer.param_groups) > 1:
-            optimizer.param_groups[1]['lr'] = args.learning_rate * (0.1**(int(i/30000))) * 2
+            optimizer.param_groups[1]['lr'] = args.learning_rate * (0.1**(int(i/15000))) * 2
 
     # def adjust_learning_rate(self, args, optimizer, i):
     #     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
@@ -441,4 +441,4 @@ class I3D(nn.Module):
     #     for param_group in optimizer.param_groups:
     #         param_group['lr'] = lr
 
-    
+

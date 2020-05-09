@@ -136,7 +136,8 @@ class DIVA_carhuman_rgb_1005(Dataset):
     if 'real' in self.mode:
       self.style = "{:05d}"
     else:
-      self.style = "{:04d}"
+      #self.style = "{:04d}"
+      self.style = "{:05d}"
 
     self._init()
 
