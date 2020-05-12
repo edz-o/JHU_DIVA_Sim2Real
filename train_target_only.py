@@ -79,6 +79,9 @@ def main():
 
         if (current_epoch) % args.save_pred_every == 0 and current_epoch > 120:
             torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(current_epoch)+'.pth' ))
+            if current_epoch >= args.num_epochs_stop:
+                print('finish training')
+                break
             '''
             with torch.no_grad():
                 model.eval()
@@ -99,9 +102,6 @@ def main():
             _t['iter time'].toc(average=False)
             print('[epoch %d][it %d][src loss %.4f][lr %.4f][%.2fs]' % \
                     (current_epoch+1, i + 1, loss_trg.mean().data, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
-            if current_epoch >= args.num_epochs_stop:
-                print('finish training')
-                break
             _t['iter time'].tic()
 
         for m in loss:

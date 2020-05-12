@@ -1,5 +1,5 @@
 EXP=$1
-for ITER in {120..130..1}
+for ITER in {121..130..1}
 do
     model_weights=snapshots/$EXP/$ITER.pth
     out_root=outputs/$EXP/$ITER
