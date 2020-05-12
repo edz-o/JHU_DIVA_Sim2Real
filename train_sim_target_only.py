@@ -71,8 +71,8 @@ def main():
             src_img, src_lbl, _, _ = next(sourceloader_iter)
         src_img, src_lbl = Variable(src_img).cuda(), Variable(src_lbl.long()).cuda()
         src_score, loss_src = model(src_img, lbl=src_lbl)
-        coeff = 0.9 * (1000-i)/1000 + 0.1 if i < 1000 else 0.1
-        loss_src *= coeff
+        #coeff = 0.9 * (1000-i)/1000 + 0.1 if i < 1000 else 0.1
+        #loss_src *= coeff
         loss_src.mean().backward()
 
         try:
@@ -111,7 +111,7 @@ def main():
         for m in loss:
             train_writer.add_scalar(m, eval(m).mean(), i+1)
 
-        if (i+1) % args.save_pred_every == 0:
+        if (i+1) % args.save_pred_every == 0 and i > 4999:
             with torch.no_grad():
                 model.eval()
                 eval_loss = 0

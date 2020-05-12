@@ -71,7 +71,7 @@ def main():
 
         optimizer.step()
 
-        if (i + 1) % args.save_pred_every == 0:
+        if (i + 1) % args.save_pred_every == 0 and i > 1000:
             with torch.no_grad():
                 model.eval()
                 eval_loss = 0
