@@ -31,8 +31,8 @@ def main():
     testloader = CreateActTrgDataLoader(args, 'test')
     targetloader_iter, sourceloader_iter = iter(targetloader), iter(sourceloader)
 
-    model, optimizer = CreateModel(args)
-    model_D, optimizer_D = CreateDiscriminator(args)
+    model, optimizer, scheduler = CreateModel(args)
+    model_D, optimizer_D, scheduler_D = CreateDiscriminator(args)
 
     start_iter = 0
     if args.restore_from is not None:
@@ -48,16 +48,17 @@ def main():
     model.cuda()
     model_D.train()
     model_D.cuda()
-    loss = ['loss_src', 'loss_trg', 'loss_D_trg_fake', 'loss_D_src_real', 'loss_D_trg_real', 'eval_loss']
+    loss = ['loss_src', 'loss_trg', 'loss_D_trg_fake', 'loss_D_src_real', 'loss_D_trg_real'] #, 'eval_loss']
     _t['iter time'].tic()
     best_loss_eval = None
     best_step = 0
     eval_loss = np.array([0])
+    current_epoch = start_iter / len(sourceloader)
     for i in range(start_iter, args.num_steps):
         model.train()
 
-        model.module.adjust_learning_rate(args, optimizer, i)
-        model_D.module.adjust_learning_rate(args, optimizer_D, i)
+        #model.module.adjust_learning_rate(args, optimizer, i)
+        #model_D.module.adjust_learning_rate(args, optimizer_D, i)
 
         optimizer.zero_grad()
         optimizer_D.zero_grad()
@@ -111,7 +112,15 @@ def main():
         for m in loss:
             train_writer.add_scalar(m, eval(m).mean(), i+1)
 
-        if (i+1) % args.save_pred_every == 0 and i > 4999:
+        epoch = int(i / len(sourceloader))
+        if epoch > current_epoch:
+            current_epoch = epoch
+            scheduler.step()
+            scheduler_D.step()
+
+        if (current_epoch) % args.save_pred_every == 0 and current_epoch > 170:
+            torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(current_epoch)+'.pth' ))
+            '''
             with torch.no_grad():
                 model.eval()
                 eval_loss = 0
@@ -125,12 +134,13 @@ def main():
                 print('taking snapshot ... eval_loss: {}'.format(eval_loss))
                 torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(i+1)+'.pth' ))
                 eval_loss = np.array([eval_loss])
+            '''
 
         if (i+1) % args.print_freq == 0:
             _t['iter time'].toc(average=False)
-            print('[it %d][src loss %.4f][lr %.4f][%.2fs]' % \
-                    (i + 1, loss_src.mean().data, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
-            if i + 1 > args.num_steps_stop:
+            print('[epoch %d][it %d][src loss %.4f][lr %.4f][%.2fs]' % \
+                    (current_epoch+1, i + 1, loss_src.mean().data, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
+            if current_epoch >= args.num_epochs_stop:
                 print('finish training')
                 break
             _t['iter time'].tic()

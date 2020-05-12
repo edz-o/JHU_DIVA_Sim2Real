@@ -21,10 +21,10 @@ CUDA_VISIBLE_DEVICES=$GPUs python train_sim_target_only.py --snapshot-dir ./snap
     --data_root /data/yzhang/IBM_data \
     --sim_data_root /data/yzhang/ \
     --sim-list sim_meva_train_6class.txt \
-    --learning-rate 0.0001 --weight-decay 0 --batch-size $BATCH_SIZE \
+    --learning-rate 0.0001 --weight-decay 2.5e-4 --batch-size $BATCH_SIZE \
     --init-weights pretrained/i3d_inception.pth --num-classes 38 \
     --learning-rate-D 0.0001 --lambda-adv-target 0.001 \
-    --num-steps-stop 10000 --save-pred-every 200 \
+    --num-epochs-stop 200 --save-pred-every 1 --milestones 170,190 --milestons_D 170,190 \
     --model I3D-inception | tee $EXP_NAME.log
 
 #--weight-decay 2.5e-4

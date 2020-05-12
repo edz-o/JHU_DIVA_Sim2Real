@@ -31,7 +31,7 @@ def main():
     targetloader_iter = iter(targetloader)
     testloader = CreateActTrgDataLoader(args, 'test')
 
-    model, optimizer = CreateModel(args)
+    model, optimizer, scheduler = CreateModel(args)
 
     start_iter = 0
     if args.restore_from is not None:
@@ -45,14 +45,15 @@ def main():
     cudnn.benchmark = True
     model.train()
     model.cuda()
-    loss = ['loss_trg', 'eval_loss']
+    loss = ['loss_trg'] #, 'eval_loss']
     _t['iter time'].tic()
     best_loss_eval = None
     best_step = 0
     eval_loss = np.array([0])
+    current_epoch = start_iter / len(targetloader)
     for i in range(start_iter, args.num_steps):
         model.train()
-        model.module.adjust_learning_rate(args, optimizer, i)
+        #model.module.adjust_learning_rate(args, optimizer, i)
 
         optimizer.zero_grad()
 
@@ -71,7 +72,14 @@ def main():
 
         optimizer.step()
 
-        if (i + 1) % args.save_pred_every == 0 and i > 1000:
+        epoch = int(i / len(targetloader))
+        if epoch > current_epoch:
+            current_epoch = epoch
+            scheduler.step()
+
+        if (current_epoch) % args.save_pred_every == 0 and current_epoch > 120:
+            torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(current_epoch)+'.pth' ))
+            '''
             with torch.no_grad():
                 model.eval()
                 eval_loss = 0
@@ -85,18 +93,20 @@ def main():
                 print('taking snapshot ... eval_loss: {}'.format(eval_loss))
                 torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(i+1)+'.pth' ))
                 eval_loss = np.array([eval_loss])
+            '''
 
         if (i+1) % args.print_freq == 0:
             _t['iter time'].toc(average=False)
-            print('[it %d][src loss %.4f][lr %.4f][%.2fs]' % \
-                    (i + 1, loss_trg.mean().data, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
-            if i + 1 > args.num_steps_stop:
+            print('[epoch %d][it %d][src loss %.4f][lr %.4f][%.2fs]' % \
+                    (current_epoch+1, i + 1, loss_trg.mean().data, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
+            if current_epoch >= args.num_epochs_stop:
                 print('finish training')
                 break
             _t['iter time'].tic()
 
         for m in loss:
             train_writer.add_scalar(m, eval(m).mean(), i+1)
+
 
 if __name__ == '__main__':
     main()

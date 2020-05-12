@@ -21,5 +21,5 @@ CUDA_VISIBLE_DEVICES=$GPUs python train_target_only.py --snapshot-dir ./snapshot
     --data_root /data/yzhang/IBM_data \
     --learning-rate 0.0001 --weight-decay 2.5e-4 --batch-size $BATCH_SIZE \
     --init-weights pretrained/i3d_inception.pth --num-classes 38 \
-    --num-steps-stop 3300 --save-pred-every 100 \
+    --num-epochs-stop 130 --save-pred-every 1 --milestones 100,120 \
     --model I3D-inception | tee $EXP_NAME.log

@@ -3,6 +3,15 @@ from model.model_inception import I3D
 import torch
 import torch.optim as optim
 
+def create_scheduler(args, optimizer):
+    milestones = [ int(epoch) for epoch in args.milestones.split(',') ]
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
+    return scheduler
+
+def create_scheduler_D(args, optimizer):
+    milestones = [ int(epoch) for epoch in args.milestones_D.split(',') ]
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
+    return scheduler
 
 def CreateModel(args):
     if args.model == 'DeepLab':
@@ -48,10 +57,11 @@ def CreateModel(args):
             #                      lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
             optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                   lr=args.learning_rate, weight_decay=args.weight_decay)
+            scheduler = create_scheduler(args, optimizer)
 
             optimizer.zero_grad()
             model = torch.nn.DataParallel(model).cuda()
-            return model, optimizer
+            return model, optimizer, scheduler
         else:
             model = torch.nn.DataParallel(model).cuda()
             return model
@@ -61,11 +71,12 @@ def CreateDiscriminator(args):
     #discriminator = FCDiscriminator(num_classes=args.num_classes)
     discriminator = NLayerDiscriminator(input_nc=1024)
     optimizer = optim.Adam(discriminator.parameters(), lr=args.learning_rate_D, betas=(0.9, 0.99))
+    scheduler = create_scheduler_D(args, optimizer)
     optimizer.zero_grad()
     if args.restore_from is not None:
         discriminator.load_state_dict(torch.load(args.restore_from + '_D.pth'))
     discriminator = torch.nn.DataParallel(discriminator).cuda()
-    return discriminator, optimizer
+    return discriminator, optimizer, scheduler
 
 
 def CreateSSLModel(args):
