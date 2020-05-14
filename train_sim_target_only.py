@@ -53,7 +53,7 @@ def main():
     best_loss_eval = None
     best_step = 0
     eval_loss = np.array([0])
-    current_epoch = start_iter / len(sourceloader)
+    current_epoch = start_iter / len(targetloader)
     for i in range(start_iter, args.num_steps):
         model.train()
 
@@ -112,7 +112,7 @@ def main():
         for m in loss:
             train_writer.add_scalar(m, eval(m).mean(), i+1)
 
-        epoch = int(i / len(sourceloader))
+        epoch = int(i / len(targetloader))
         if epoch > current_epoch:
             current_epoch = epoch
             scheduler.step()

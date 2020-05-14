@@ -3,3 +3,4 @@ pretrained
 *.pth
 *.pyc
 *.json
+*.log

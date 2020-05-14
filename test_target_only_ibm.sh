@@ -6,6 +6,6 @@ do
     batch_size=2
     python test_only.py --iter $ITER --model-weights $model_weights --batch-size $batch_size \
                                 --out-root $out_root --num-workers 4 --data_root /data/yzhang/IBM_data \
-                                --test-list /data/yzhang/IBM_data/umd_gt_test_6class.txt | tee -a snapshots/$EXP/test_log
+                                --test-list name_lists/umd_gt_test.txt | tee -a snapshots/$EXP/test_log
 done
 #
