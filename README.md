@@ -65,31 +65,31 @@ The way for domain adaptation is adversarial training.
 
 ## Train on diva dataset only
 
-Modify configs in `train_target_only.sh`. You should put image paths in `.txt` file; modify `--train-list` and `--test-list`
+Modify configs in `train_target_only_ibm.sh`. You should put image paths in `.txt` file; modify `--train-list`, `--test-list`, `--data_root`
 
 Run the following e.g.,
 
 ```bash
-bash train_target_only.sh exp_20200101 0,1
+bash train_target_only_ibm.sh exp_20200101 0,1
 ```
 
 
 ## Train on diva dataset plus synthetic dataset using adversarail training
 
-Modify configs in `train_advt.sh`. Similarly modify `--train-list`, `--test-list` and `--sim-list`
+Modify configs in `train_ibm_advt.sh`. Similarly modify `--train-list`, `--test-list`, `--sim-list`, `--data_root`, `--sim_data_root`
 
 Run the following e.g.,
 
 ```bash
-bash train_advt.sh exp_20200101 0,1
+bash train_ibm_advt.sh exp_20200101 0,1
 ```
 
 ## Test on diva dataset
 
-Test real only model: modify configs in `test_target_only.sh` and run
-Test adversarial training model: modify configs in `test_advt.sh` and run
+Test real only model: modify configs in `test_target_only_ibm.sh` and run
+Test adversarial training model: modify configs in `test_ibm_advt.sh` and run
 For example,
 
 ```bash
-bash test_target_only.sh exp_20200101
+bash test_target_only_ibm.sh exp_20200101
 ```
