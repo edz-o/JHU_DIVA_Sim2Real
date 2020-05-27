@@ -15,6 +15,19 @@ import pdb
 torch.cuda.manual_seed_all(1234)
 torch.cuda.seed_all()
 np.random.seed(1234)
+
+class LossBalance(object):
+
+    def __init__ (self, thresh_epoch, final_lr=0.1):
+        self.thresh_epoch = thresh_epoch
+        self.final_lr = final_lr
+
+    def __call__ (self, epoch):
+        coeff = (1-self.final_lr) * (self.thresh_epoch - epoch) / \
+                self.thresh_epoch + self.final_lr if epoch < self.thresh_epoch else self.final_lr
+        return coeff
+
+
 def main():
 
     opt = TrainOptions()
@@ -33,6 +46,8 @@ def main():
 
     model, optimizer, scheduler = CreateModel(args)
     model_D, optimizer_D, scheduler_D = CreateDiscriminator(args)
+
+    loss_balance = LossBalance(100, 0.1)
 
     start_iter = 0
     if args.restore_from is not None:
@@ -72,8 +87,8 @@ def main():
             src_img, src_lbl, _, _ = next(sourceloader_iter)
         src_img, src_lbl = Variable(src_img).cuda(), Variable(src_lbl.long()).cuda()
         src_score, loss_src = model(src_img, lbl=src_lbl)
-        #coeff = 0.9 * (1000-i)/1000 + 0.1 if i < 1000 else 0.1
-        #loss_src *= coeff
+        coeff = loss_balance(current_epoch)
+        loss_src *= coeff
         loss_src.mean().backward()
 
         try:
@@ -141,8 +156,8 @@ def main():
 
         if (i+1) % args.print_freq == 0:
             _t['iter time'].toc(average=False)
-            print('[epoch %d][it %d][src loss %.4f][lr %.4f][%.2fs]' % \
-                    (current_epoch+1, i + 1, loss_src.mean().data, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
+            print('[epoch %d][it %d][src loss %.4f][src loss weight %.2f][lr %.4f][%.2fs]' % \
+                    (current_epoch+1, i + 1, loss_src.mean().data, coeff, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
             _t['iter time'].tic()
 
 if __name__ == '__main__':

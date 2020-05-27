@@ -57,13 +57,32 @@ Pretrained weights using synthetic data [here](https://www.cs.jhu.edu/~yzh/sim_p
 
 # Instructions
 
-This code contains two experiments: ***real***, ***real+sim***; train on diva dataset only or train on diva dataset plus synthetic dataset.
+This code contains three experiments: ***real***, ***real+sim adversarial training*** and ***pretrain on sim then finetune on real***; train on diva dataset only or train on diva dataset plus synthetic dataset.
 
-The way for domain adaptation is adversarial training.
+The way for domain adaptation is adversarial training or finetuning.
+
+## (NEW) Process new synthetic data
+
+Use the script `process_sim_data.sh` to process newly generated synthetic videos. Set `Folder` to be the path to the video folder. At the same directory, the RGB frames will be extracted to a folder ends with `_image` and a JSON annotation file will be generated.
+
+Use the script `generate_sim_list.py` to generate the name list of synthetic data. Modify the dict `list` to include the synthetic data you want to use.
+
+## (NEW) Pretrain on synthetic data
+
+Use `train_source_ibm.sh`. Set `--train-list` to be the list of synthetic data you want to pretrain on and `--data_root` to be the root directory of the data folder. 
+```bash
+bash train_source_ibm.sh EXP_NAME 0,1,2,3
+```
+
+## (NEW) Finetuning a pretrained network on MEVA
+
+Use `finetune_target_ibm.sh`. Set `--train-list` to be the list of real data you want to finetune on and `--data_root` to be the root directory of the data folder. 
+```bash
+bash train_source_ibm.sh EXP_NAME 0,1,2,3
+```
 
 
-
-## Train on diva dataset only
+## Train on meva dataset only
 
 Modify configs in `train_target_only_ibm.sh`. You should put image paths in `.txt` file; modify `--train-list`, `--test-list`, `--data_root`
 
@@ -74,7 +93,7 @@ bash train_target_only_ibm.sh exp_20200101 0,1
 ```
 
 
-## Train on diva dataset plus synthetic dataset using adversarail training
+## Train on meva dataset plus synthetic dataset using adversarail training
 
 Modify configs in `train_ibm_advt.sh`. Similarly modify `--train-list`, `--test-list`, `--sim-list`, `--data_root`, `--sim_data_root`
 
