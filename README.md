@@ -80,7 +80,7 @@ Use `finetune_target_ibm.sh`. Set `--train-list` to be the list of real data you
 ```bash
 bash train_source_ibm.sh EXP_NAME 0,1,2,3
 ```
-
+Testing is using the same script `test_target_only_ibm.sh` as in [Test on diva dataset](#test-on-diva-dataset).
 
 ## Train on meva dataset only
 
