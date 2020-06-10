@@ -1,3 +1,33 @@
+# Depth-related instructions (TK)
+## 1. Prep Dataset
+Please change lines 17-20 and 39-40 accordingly in `convert_dataset.py`. Then run 
+```
+python convert_dataset.py
+```
+## 2. Compute Depth Flow
+Please edit lines 32 and 33 accordingly in `utils/compute_depth_flow.py`. Then run
+```
+python utils/compute_depth_flow.py
+```
+## 3. Pretrain on simulation
+In `train_ibm_depth.sh`, check whether input argument `sim-list` points to appropriate simulation name-list (eg. sim_meva_train_classes_depth_*.txt). Also make sure to change `snapshot-dir`. Then to start pre-training on sim with experiment name `NAME1` on GPU 1:
+```
+./train_ibm_depth.sh NAME1 1
+```
+
+## 4. Finetune on real
+In `finetune_ibm_depth.sh`, check `train-list` and `test-list` name-lists. Also, change `restore-from` argument to point to appropriate pretrained model checkpoint. Then to finetune,
+```
+./finetune_ibm_depth.sh FINETUNE_1 1
+```
+## 5. Test
+Edit `test_ibm_advt.sh` accordingly. To run finetuned model from the above experiment (experiment-name = FINETUNE_1), run:
+```
+./test_ibm_advt.sh FINETUNE_1
+```
+
+
+
 # Requirements
 
 - Python 3.5+
