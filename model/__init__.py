@@ -2,7 +2,7 @@ from model.discriminator import FCDiscriminator, NLayerDiscriminator
 from model.model_inception import I3D
 import torch
 import torch.optim as optim
-
+import pdb
 def create_scheduler(args, optimizer):
     milestones = [ int(epoch) for epoch in args.milestones.split(',') ]
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
@@ -58,9 +58,11 @@ def CreateModel(args):
             optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                   lr=args.learning_rate, weight_decay=args.weight_decay)
             scheduler = create_scheduler(args, optimizer)
+            model.add_depth_module()
 
             optimizer.zero_grad()
-            model = torch.nn.DataParallel(model).cuda()
+            #model = torch.nn.DataParallel(model).cuda()
+            model = model.cuda()
             return model, optimizer, scheduler
         else:
             model = torch.nn.DataParallel(model).cuda()

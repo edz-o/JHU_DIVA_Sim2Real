@@ -22,6 +22,7 @@ from data import CreateActTrgDataLoader
 from scipy.stats import mode
 from torchvision import datasets, transforms
 import videotransforms
+from model import CreateModel
 
 from model.model_inception import I3D
 from sklearn.metrics import average_precision_score
@@ -42,6 +43,9 @@ USE_NEG_LABEL = True
 
 def parse_args():
     parser = argparse.ArgumentParser(description="test I3D")
+    parser.add_argument("--model", type=str, default='I3D-inception', help="available options : DeepLab and VGG")
+    parser.add_argument("--depth", type=int, default=1, help="available options : DeepLab and VGG")
+    parser.add_argument("--num_classes", type=int, default=6, help="available options : DeepLab and VGG")
     parser.add_argument("--iter", type=int, help='model iteration')
     parser.add_argument("--is_real", default=1, type=int, help='model iteration')
     parser.add_argument("--batch-size", type=int, help='batch size')
@@ -52,7 +56,8 @@ def parse_args():
     parser.add_argument("--out-root", type=str, help='model iteration')
     parser.add_argument("--method", type=str, default='', help='method name')
     parser.add_argument("--out_feat", action='store_true', help='output feature')
-
+    parser.add_argument("--set", type=str, default='val', help="choose adaptation set.")
+    parser.add_argument("--init-weights", type=str, default='pretrained/i3d_inception.pth', help="initial model.")
 
     return parser.parse_args()
 
@@ -116,7 +121,8 @@ def acc_ap(ps, ys, ys_, num_classes):
     return val_map, aps
 use_gpu = torch.cuda.is_available()
 
-n_classes = 38 #6
+#n_classes = 38 #6
+n_classes = 6
 
 class_weights = None
 if use_gpu and class_weights is not None:
@@ -125,7 +131,6 @@ if use_gpu and class_weights is not None:
 torch.cuda.manual_seed_all(1234)
 torch.cuda.seed()
 np.random.seed(1234)
-prop_root = '/data/tk/carhuman_near_proposals_042919/'
 
 
 def get_i3d(n_class,mode='rgb', multi=False):
@@ -143,7 +148,10 @@ def main():
   out_root = args.out_root
   if not os.path.exists(out_root):
     os.makedirs(out_root)
-  model = get_i3d(n_classes,mode='rgb')
+  model = I3D(num_classes=args.num_classes, phase=args.set, partial_bn=False)
+    #start_iter = 0
+  model.add_depth_module()
+
   state_dict = torch.load(model_weights)
   model.load_state_dict(state_dict,strict=False)
   model.eval()
@@ -168,6 +176,7 @@ def test_model(args, model, data_loader):
   #num_corrects = np.zeros(n_classes)
   for phase in ['val']:
       model.train(False)
+      model.eval()
       #running_loss = 0.0
       #all_running_corrects = 0
 
@@ -226,7 +235,8 @@ def test_model(args, model, data_loader):
         all_preds[count:count+bz] = preds.cpu().numpy()
         # TODO calculate loss
 
-        probs = torch.softmax(outputs, dim=-1)
+        #probs = torch.softmax(outputs, dim=-1)
+        probs = F.softmax(outputs,dim=-1)
         ys_[count:count+bz] = probs.cpu().numpy() #.squeeze()
         count += bz
 

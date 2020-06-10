@@ -11,6 +11,7 @@ from model import CreateDiscriminator
 from utils.timer import Timer
 import tensorboardX
 import pdb
+import matplotlib.pyplot as plt
 
 torch.cuda.manual_seed_all(1234)
 torch.cuda.seed_all()
@@ -30,7 +31,6 @@ def main():
     sourceloader, targetloader = CreateActSrcDataLoader(args), CreateActTrgDataLoader(args, 'train')
     testloader = CreateActTrgDataLoader(args, 'test')
     targetloader_iter, sourceloader_iter = iter(targetloader), iter(sourceloader)
-
     model, optimizer, scheduler = CreateModel(args)
     model_D, optimizer_D, scheduler_D = CreateDiscriminator(args)
 
@@ -39,9 +39,6 @@ def main():
         start_iter = int(args.restore_from.rsplit('/', 1)[1].rsplit('_')[1])
 
     train_writer = tensorboardX.SummaryWriter(os.path.join(args.snapshot_dir, "logs"))
-
-    bce_loss = torch.nn.BCEWithLogitsLoss()
-
     cudnn.enabled = True
     cudnn.benchmark = True
     model.train()
@@ -57,8 +54,6 @@ def main():
     for i in range(start_iter, args.num_steps):
         model.train()
 
-        #model.module.adjust_learning_rate(args, optimizer, i)
-        #model_D.module.adjust_learning_rate(args, optimizer_D, i)
 
         optimizer.zero_grad()
         optimizer_D.zero_grad()
@@ -66,15 +61,34 @@ def main():
             param.requires_grad = False
 
         try:
-            src_img, src_lbl, _, _ = next(sourceloader_iter)
+            if args.depth == 1:
+                src_img, src_lbl,src_depth, _, _ = next(sourceloader_iter)
+                src_depth = Variable(src_depth).cuda().float()
+
+            else:
+                src_img, src_lbl,   _, _ = next(sourceloader_iter)
         except StopIteration:
             sourceloader_iter = iter(sourceloader)
-            src_img, src_lbl, _, _ = next(sourceloader_iter)
+            if args.depth == 1:
+                src_img, src_lbl, src_depth, _, _ = next(sourceloader_iter)
+                src_depth = Variable(src_depth).cuda().float()
+            else:
+                src_img, src_lbl, _, _ = next(sourceloader_iter)
+
+
         src_img, src_lbl = Variable(src_img).cuda(), Variable(src_lbl.long()).cuda()
-        src_score, loss_src = model(src_img, lbl=src_lbl)
+
+        if args.depth == 1:
+            src_score, loss_src,depth_loss = model(src_img, lbl=src_lbl, depth_lbl=src_depth)
+        else:
+            src_score, loss_src = model(src_img, lbl=src_lbl)
+
+
         #coeff = 0.9 * (1000-i)/1000 + 0.1 if i < 1000 else 0.1
         #loss_src *= coeff
-        loss_src.mean().backward()
+
+        Loss = loss_src.mean() + depth_loss.mean()
+        Loss.backward()
 
         try:
             trg_img, trg_lbl, _, _ = next(targetloader_iter)
@@ -118,12 +132,15 @@ def main():
             scheduler.step()
             scheduler_D.step()
 
-        if (current_epoch) % args.save_pred_every == 0 and current_epoch > 170:
-            torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(current_epoch)+'.pth' ))
+        if (current_epoch) % args.save_pred_every == 0 and current_epoch > 10:
+            try:
+              torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(current_epoch)+'.pth' ))
+            except:
+              torch.save(model.state_dict(), os.path.join(args.snapshot_dir, str(current_epoch)+'.pth' ))
             if current_epoch >= args.num_epochs_stop:
                 print('finish training')
                 break
-            '''
+            ''' 
             with torch.no_grad():
                 model.eval()
                 eval_loss = 0
@@ -135,15 +152,59 @@ def main():
                     best_loss_eval = eval_loss
                     best_step = i + 1
                 print('taking snapshot ... eval_loss: {}'.format(eval_loss))
-                torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(i+1)+'.pth' ))
+                try:
+                  torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(i+1)+'_.pth' ))
+                except:
+                  torch.save(model.module.state_dict(), os.path.join(args.snapshot_dir, str(i+1)+'_.pth' ))
                 eval_loss = np.array([eval_loss])
             '''
 
         if (i+1) % args.print_freq == 0:
+            #visualize_and_log_depth(src_img[0],trg_img[0],model,current_epoch,train_writer)
             _t['iter time'].toc(average=False)
-            print('[epoch %d][it %d][src loss %.4f][lr %.4f][%.2fs]' % \
-                    (current_epoch+1, i + 1, loss_src.mean().data, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
+            print('[epoch %d][it %d][src loss %.4f][depth loss %.4f][lr %.4f][%.2fs]' % \
+                    (current_epoch+1, i + 1, loss_src.mean().data,depth_loss.mean().data, optimizer.param_groups[0]['lr']*10000, _t['iter time'].diff))
             _t['iter time'].tic()
+
+def visualize_and_log_depth(sim,real,model,current_epoch, log):
+  with torch.no_grad():
+    model.eval()
+    fig = plt.figure()
+
+    _, sim_depth = model(x=torch.unsqueeze(sim,0),lbl=None, depth_lbl=None,ssl=False,test=True)
+    _, real_depth = model(x=torch.unsqueeze(real, 0), lbl=None, depth_lbl=None, ssl=False, test=True)
+
+    real = real.transpose(0, 1)
+    sim = sim.transpose(0,1)
+
+    count = 1
+    for ind in [0,4,8,12]:
+      real_rgb = real[ind]-real[ind].min()
+      real_rgb /= real_rgb.max()
+      real_rgb = real_rgb.cpu().transpose(0,1).transpose(1,2)
+      sim_rgb = sim[ind] - sim[ind].min()
+      sim_rgb /= sim_rgb.max()
+      sim_rgb = sim_rgb.cpu().transpose(0, 1).transpose(1, 2)
+      rdepth = real_depth[ind].cpu()*255
+      sdepth = sim_depth[ind].cpu()*255
+
+      ax = plt.subplot(4,4,count)
+      ax.imshow(real_rgb)
+      ax.axis('off')
+
+      ax = plt.subplot(4, 4, 4+count)
+      ax.imshow(rdepth)
+      ax.axis('off')
+
+      ax = plt.subplot(4, 4, 8 + count)
+      ax.imshow(sim_rgb)
+      ax.axis('off')
+      ax = plt.subplot(4, 4, 12 + count)
+      ax.imshow(sdepth)
+      ax.axis('off')
+      count += 1
+    log.add_figure('depth prediction vis',fig,current_epoch,close=True)
+
 
 if __name__ == '__main__':
     main()

@@ -30,8 +30,15 @@ classes= [
   'Open_Trunk',
   'Opening',
 ]
+six_class_label_map = {
+  6:0,
+  10:1,
+  7:2,
+  8:3,
+  9:4,
+  5:5
+}
 classes = [
-
         'null',
         'person_opens_facility_door',
         'person_closes_facility_door',
@@ -70,7 +77,6 @@ classes = [
         'vehicle_drops_off_person',
         'abandon_package',
         'theft'
-
         ]
 def get_prop_seq_name(name):
     return '_'.join(name.split('_')[:-1])
@@ -108,7 +114,8 @@ class VideoRecord(object):
 
     @property
     def label(self):
-        return int(self._data[3].strip())
+        #return int(self._data[3].strip())
+        return six_class_label_map[int(self._data[3].strip())]
         #return classes.index(self._data[3].strip())
 
     @property
@@ -122,7 +129,8 @@ class DIVA_carhuman_rgb_1005(Dataset):
                activities=classes,
                transform=None,
                n_samples=16,
-               data_root=''):
+               data_root='',
+               depth=0):
     self.activities = activities
     self.split=split
     self.mode=mode
@@ -132,12 +140,18 @@ class DIVA_carhuman_rgb_1005(Dataset):
     self.n_samples = n_samples
     self.stride = int(64 / self.n_samples)
     self.data_root = data_root
+    self.depth = depth
+    self.depth_transforms = torchvision.transforms.Compose([
+      torchvision.transforms.ToPILImage(),
+      torchvision.transforms.Resize((56, 56)),
+      torchvision.transforms.ToTensor()
+    ])
 
     if 'real' in self.mode:
       self.style = "{:05d}"
     else:
       #self.style = "{:04d}"
-      self.style = "{:05d}"
+      self.style = "image_{:05d}"
 
     self._init()
 
@@ -149,8 +163,12 @@ class DIVA_carhuman_rgb_1005(Dataset):
 
 
   def __getitem__(self, idx):
-      paths, labels = self.indices[idx]
+      if self.depth == 1:
+        paths,depth_paths, labels = self.indices[idx]
+      else:
+        paths, labels = self.indices[idx]
       X = []
+      D = []
 
       REAL = 'real' in self.mode
 
@@ -164,29 +182,49 @@ class DIVA_carhuman_rgb_1005(Dataset):
         end_index = min(begin_index + 64, len(paths))
 
       out = paths[begin_index:end_index]
-
       if len(out) < 64:
           out = [ out[int(x)] for x in np.linspace( 0, len(out)-1, 64) ]
-
       paths = out[::self.stride]
+
+      if self.depth == 1:
+        out = depth_paths[begin_index:end_index]
+        if len(out) < 64:
+          out = [out[int(x)] for x in np.linspace(0, len(out) - 1, 64)]
+        depth_paths = out[::self.stride]
 
       for frame in paths:
         crop = cv2.imread(frame)
-        if crop is None:
-            print(frame)
-            pdb.set_trace()
+        #if crop is None:
+        #    print(frame)
+        #    pdb.set_trace()
         X.append(crop)
+
+      if self.depth == 1:
+        for frame in depth_paths:
+#          crop = cv2.imread(frame)[:,:,0]
+#          crop = self.depth_transforms(crop)
+#          D.append(crop)
+
+          depth = np.load(frame)
+          depth = cv2.resize(depth,(56,56))
+          D.append(depth.transpose(2,0,1))
+
 
       if self.transform:
         X = self.transform(X)
 
-      return video_to_tensor(X), labels, REAL, paths
+      if self.depth == 1:
+        return video_to_tensor(X), labels, torch.from_numpy(np.array(D)).transpose(0,1), REAL, paths
+      else:
+        return video_to_tensor(X), labels, REAL, paths
 
   def _parse_list(self):
     self.video_list = [VideoRecord(x.split(' ')) for x in open(self.list_file)]
 
   def _init(self):
     self._parse_list()
+
+
     for i in range(len(self.video_list)):
       record = self.video_list[i]
       root = os.path.join(self.data_root, record.path)
@@ -194,22 +232,34 @@ class DIVA_carhuman_rgb_1005(Dataset):
       end = record.end_frames
       label = record.label
       img_paths = []
-
+      if self.depth == 1:
+        sp = root.split('/')
+        identifier = sp[-2]
+        sp[-2] = identifier[:identifier.rfind('_')]+'_depth_flow_bugfix'
+        depth_root = '/'
+        for token in sp[1:]:
+          depth_root += token
+          depth_root += '/'
+        depth_paths = []
       for frame_ in range(start, end):
         if os.path.exists(os.path.join(root, self.style.format(frame_)+'.jpg')):
           img_paths.append(os.path.join(root, self.style.format(frame_)+'.jpg'))
-
-
+          if self.depth == 1:
+            depth_paths.append(os.path.join(depth_root, 'depthflow_{:05d}'.format(frame_)+'.npy'))
 
       if len(img_paths) == 0 or label is None:
         continue
 
-      self.indices.append((img_paths, label))
-
+      if self.depth == 1:
+        self.indices.append((img_paths, depth_paths,label))
+      else:
+        self.indices.append((img_paths, label))
 
 
 if __name__ == '__main__':
   #dump_frames()
-  data = DIVA_carhuman_proposals_0429_rgb_v2('/data/tk/carhuman_near_proposals_042919/train',include_gt=True,include_sim=True)
+  data = DIVA_carhuman_rgb_1005('/data/tk/carhuman_near_proposals_042919/train',
+                                include_gt=True,include_sim=True)
+
   for dat in data:
     print()
