@@ -11,7 +11,7 @@ We provide a script to reproduce the results, see `run_code.sh`.
 
 ## Download Sim-DIVA data
 
-Sim-DIVA data download [here](https://www.cs.jhu.edu/~yzh/20191026_diva_sim_data.tar).
+Sim-DIVA data download [here](https://livejohnshopkins-my.sharepoint.com/:u:/g/personal/yzhan286_jh_edu/Ee9qNRPjdWtJmJ7M1riiv24B0QGq4o3PWLrLMok4KTfBLQ?e=hM2l6f).
 
 Currently, we have six DIVA activities: Closing, Closing_Trunk, Entering, Exiting, Opening, Open_Trunk.
 
@@ -30,7 +30,7 @@ python json_gt_to_cgt_oroginal_v2.py
 python image_crop_with_cgt.py 
 ```
 
-**The cropped frames can be downloaded from [here](https://www.cs.jhu.edu/~yzh/190207_DIVA_Union_CGT_images.tar).**
+**The cropped frames can be downloaded from [here](https://livejohnshopkins-my.sharepoint.com/:u:/g/personal/yzhan286_jh_edu/ERJ-l7JMVSdKj4e7AFx7k5IBoi1mjqNBdo21AvqmGqQw1A?e=iKvZD9).**
 
 Make symlink to PWD,
 
